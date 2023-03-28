@@ -28,7 +28,7 @@ public actor TaskQueue {
             running -= 1
             tryRunEnqueued()
         }
-        
+
         try Task.checkCancellation()
         return try await operation()
     }

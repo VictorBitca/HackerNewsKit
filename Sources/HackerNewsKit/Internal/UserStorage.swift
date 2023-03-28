@@ -14,8 +14,8 @@ class UserStorage {
         return false
     }
 
-    static func logout() {
-        loggedInUser = nil
+    static func logOut() {
+        loggedInUser = ""
         guard let cookies = HTTPCookieStorage.shared.cookies else { return }
         
         cookies.forEach { cookie in

@@ -65,6 +65,11 @@ public struct HackerNewsAPI {
          try await hnPrivateAPI.login(username: username, password: password)
     }
     
+    /// Sign out the current user.
+    public func signOut() {
+        UserStorage.logOut()
+    }
+    
     /// Returns all main feed items based on the requested type.
     ///
     /// Loading all the items at once can take a bit more time,
@@ -85,12 +90,10 @@ public struct HackerNewsAPI {
         return try await firebase.items(for: ids).compactMap { StoryItem(rawItem: $0) }
     }
     
-    /// Create a custom commet async sequence,
     public func comments(with roots: [Int]) -> CommentAsyncSequence {
         return CommentAsyncSequence(items: roots)
     }
     
-    /// Returns an async channel that 
     public func savedStories(of type: SaveType) throws -> AsyncChannel<[StoryItem]> {
         let channel = AsyncChannel<[StoryItem]>()
         
@@ -102,6 +105,8 @@ public struct HackerNewsAPI {
                 let stories = items.compactMap { StoryItem(rawItem: $0) }
                 await channel.send(stories)
             }
+            
+            channel.finish()
         }
         
         return channel
@@ -129,6 +134,8 @@ public struct HackerNewsAPI {
                 try Task.checkCancellation()
                 await channel.send(chunks)
             }
+            
+            channel.finish()
         }
 
         return channel

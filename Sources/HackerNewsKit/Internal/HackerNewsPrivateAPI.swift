@@ -364,7 +364,6 @@ extension HackerNewsPrivateAPI {
             .uniqued()
     }
 
-    // Loads the favorite story IDs
     private func loadFavoriteIDs(request: URLRequest) async throws -> [Int] {
         let data = try await loader.execute(request: request)
         guard let input = String(data: data, encoding: .utf8) else { throw "Invalid response" }

@@ -20,12 +20,9 @@ struct DiskPersistor {
     }
 
     static func save<T: Codable>(value: T, for key: String, completion: (() -> Void)? = nil) {
-        DispatchQueue.main.async {
-            defer { completion?() }
-            guard let url = FileManager.default.documentsDirectoryURL(for: key),
-                let rawData = try? JSONEncoder().encode(value) else { return }
-            DiskDataIO.write(rawData, to: url)
-        }
+        guard let url = FileManager.default.documentsDirectoryURL(for: key),
+              let rawData = try? JSONEncoder().encode(value) else { return }
+        DiskDataIO.write(rawData, to: url)
     }
 }
 

@@ -7,25 +7,33 @@ import Combine
 /// The number of concurrent tasks is limited to four because the preview generation is rather slow and only runs on the main thread.
 @MainActor
 public class LinkPreviewProvider {
+    static public var concurrency = 4
     static public let shared = LinkPreviewProvider()
     
-    private let taskQueue = TaskQueue(concurrency: 4)
+    private let taskQueue = TaskQueue(concurrency: concurrency)
     
     public func previewImage(for url: URL, imageTargetSize: CGSize = CGSize(width: 300, height: 300)) async -> UIImage? {
+                
         let imageKey = "image+\(url.absoluteString.sanitizedFileName)"
         
-        if let cachedImage = DiskPersistor.imageFromCache(for: imageKey) { return cachedImage }
+        if let cachedImage = DiskPersistor.imageFromCache(for: imageKey) {
+            return cachedImage
+        }
         
         return try? await taskQueue.enqueue(operation: {
             return await self.loadImage(url: url, imageKey: imageKey, imageTargetSize: imageTargetSize)
         })
     }
     
-    private func loadImage(url: URL, imageKey: String, imageTargetSize: CGSize) async -> UIImage? {
+    nonisolated private func loadImage(url: URL, imageKey: String, imageTargetSize: CGSize) async -> UIImage? {
         try? Task.checkCancellation()
-        guard let linkMetadata = try? await LPMetadataProvider().startFetchingMetadata(for: url) else { return nil }
+        let metadataTask = Task { @MainActor () -> LPLinkMetadata? in
+            return try? await LPMetadataProvider().startFetchingMetadata(for: url)
+        }
         
-        let imageScalingTask: Task<UIImage?, Never> = Task.detached(priority: .background) {
+        guard let linkMetadata = await metadataTask.value else { return nil }
+        
+        let imageScalingTask = Task(priority: .background) { () -> UIImage? in
             guard let image = await linkMetadata.imageProvider?.loadObject(ofClass: UIImage.self) as? UIImage else { return nil }
             let scaledImage = image.scalePreservingAspectRatio(targetSize: CGSize(width: 300, height: 300))
             let imageData = scaledImage.jpegData(compressionQuality: 1)?.base64EncodedString()
